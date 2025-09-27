@@ -6,4 +6,6 @@ def categorize_query(query) -> str:
     if any(word in query for word in pdf_keywords):
         return 'pdf'
     
-    return 'message'
+    #elif query has "summarize"
+
+    #else (meaning messages)
