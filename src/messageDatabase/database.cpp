@@ -30,6 +30,12 @@ std::string normalize_phone(std::string phone) {
     // Remove common formatting characters
     phone.erase(std::remove_if(phone.begin(), phone.end(),
         [](char c) { return std::isspace(c) || c == '(' || c == ')' || c == '-'; }), phone.end());
+
+    // If number starts with '1' but not '+1', remove the '1' before adding '+1'
+    if (phone.rfind("1", 0) == 0 && phone.length() > 1) {
+        phone.erase(0, 1);
+    }
+    
     // Add US country code if missing
     if (!phone.empty() && phone[0] != '+') {
         phone.insert(0, "+1");
@@ -60,6 +66,8 @@ std::optional<Contact> Database::parse_plist_file(const fs::path& file_path) {
 
         std::unique_ptr<PList::Dictionary> dict{new PList::Dictionary(root_c_node)};
 
+        // --- CORRECTED LINES ---
+        // Dereference the unique_ptr with (*) before using the [] operator
         PList::Node* first_name_node = (*dict)["First"];
         PList::Node* last_name_node = (*dict)["Last"];
         
@@ -68,6 +76,8 @@ std::optional<Contact> Database::parse_plist_file(const fs::path& file_path) {
         std::optional<std::string> phone;
 
         PList::Node* phone_node = (*dict)["Phone"];
+        // --- END CORRECTIONS ---
+
         if (auto* phone_dict = dynamic_cast<PList::Dictionary*>(phone_node)) {
             PList::Node* values_node = (*phone_dict)["values"];
             if (auto* values_array = dynamic_cast<PList::Array*>(values_node)) {
@@ -114,15 +124,18 @@ void Database::enrich_contacts_from_db() {
     std::unordered_map<std::string, HandleInfo> handle_map;
 
     SQLite::Statement query(m_db, "SELECT ROWID, id, service FROM handle");
+    
     while (query.executeStep()) {
         unsigned int handle_id = query.getColumn(0).getUInt();
         std::string identifier = query.getColumn(1).getString();
         std::string service = query.getColumn(2).getString();
 
-        if (identifier.find('@') == std::string::npos) {
+        // **NORMALIZE IT IMMEDIATELY**
+        if (identifier.find('@') == std::string::npos) { // It's a phone number
             identifier = normalize_phone(identifier);
         }
 
+        // Now the map key is guaranteed to be in the same format
         if (service == "iMessage") {
             handle_map[identifier].imessage_id = handle_id;
         } else if (service == "SMS") {
@@ -130,11 +143,12 @@ void Database::enrich_contacts_from_db() {
         }
     }
 
+    // Now, the lookup will be reliable because both the contact's phone
+    // and the map's key have been normalized in the exact same way.
     for (auto& contact : m_contacts) {
         if (contact.m_phone_number.has_value()) {
-            std::string normalized = normalize_phone(contact.m_phone_number.value());
-            
-            auto it = handle_map.find(normalized);
+            // No need to normalize here again, since it's already clean
+            auto it = handle_map.find(contact.m_phone_number.value());
             if (it != handle_map.end()) {
                 contact.m_imessage_handle_id = it->second.imessage_id;
                 contact.m_sms_handle_id = it->second.sms_id;
@@ -146,7 +160,7 @@ void Database::enrich_contacts_from_db() {
 
 void Database::populate_messages() {
     try {
-        SQLite::Statement query(m_db, "SELECT text, attributedBody, date, handle_id, is_from_me FROM message");
+        SQLite::Statement query(m_db, "SELECT text, attributedBody, date, handle_id, is_from_me, cache_has_attachments FROM message");
 
         while (query.executeStep()) {
             if (auto msg_opt = MessageData::from_database_row(query)) {
