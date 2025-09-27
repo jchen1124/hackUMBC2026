@@ -1,9 +1,10 @@
 # PROJECT SPECIFIC FILES AND FOLDERS
 res/*
 out/*
+*.db
 
-# Created by https://www.toptal.com/developers/gitignore/api/vcpkg,python,cmake,c++
-# Edit at https://www.toptal.com/developers/gitignore?templates=vcpkg,python,cmake,c++
+## Created by https://www.toptal.com/developers/gitignore/api/c++,visualstudiocode,python,database,vcpkg,react
+# Edit at https://www.toptal.com/developers/gitignore?templates=c++,visualstudiocode,python,database,vcpkg,react
 
 ### C++ ###
 # Prerequisites
@@ -39,24 +40,15 @@ out/*
 *.out
 *.app
 
-### CMake ###
-CMakeLists.txt.user
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
-Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps
-
-### CMake Patch ###
-CMakeUserPresets.json
-
-# External projects
-*-prefix/
+### Database ###
+*.accdb
+*.db
+*.dbf
+*.mdb
+*.pdb
+*.sqlite3
+*.db-shm
+*.db-wal
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
@@ -229,6 +221,21 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
+### react ###
+.DS_*
+logs
+**/*.backup.*
+**/*.back.*
+
+node_modules
+bower_components
+
+*.sublime*
+
+psd
+thumb
+sketch
+
 ### vcpkg ###
 # Vcpkg
 
@@ -237,4 +244,23 @@ vcpkg-manifest-install.log
 ## Manifest Mode
 vcpkg_installed/
 
-# End of https://www.toptal.com/developers/gitignore/api/vcpkg,python,cmake,c++
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+### VisualStudioCode Patch ###
+# Ignore all local history of files
+.history
+.ionide
+
+# End of https://www.toptal.com/developers/gitignore/api/c++,visualstudiocode,python,database,vcpkg,react
