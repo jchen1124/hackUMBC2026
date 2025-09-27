@@ -4,3 +4,6 @@ from collections import defaultdict
 from datetime import datetime
 import os
 import sqlite3
+
+connection = sqlite3.connect('jason.db')
+
