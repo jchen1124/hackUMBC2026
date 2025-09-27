@@ -9,6 +9,8 @@ out/*
 !res/.gitkeep
 !out/.gitkeep
 
+node_modules/
+
 ## Created by https://www.toptal.com/developers/gitignore/api/c++,visualstudiocode,python,database,vcpkg,react
 # Edit at https://www.toptal.com/developers/gitignore?templates=c++,visualstudiocode,python,database,vcpkg,react
 
