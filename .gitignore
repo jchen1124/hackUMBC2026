@@ -269,4 +269,7 @@ vcpkg_installed/
 .history
 .ionide
 
+myenv/
+pdf_files.txt
+
 # End of https://www.toptal.com/developers/gitignore/api/c++,visualstudiocode,python,database,vcpkg,react
