@@ -25,6 +25,7 @@ private:
     // These handle text extraction
     static std::optional<std::string> parse_attributedText(const void* blob, int size);
     static std::string drop_leading_chars(std::string_view sv, int count);
+    static bool invalid_imessage_body(const std::string& text);
 
     // This one converts the apple timestamp in the SQL database into something usefull
     static std::chrono::system_clock::time_point convert_apple_timestamp(long long apple_timestamp);

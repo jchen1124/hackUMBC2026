@@ -16,14 +16,12 @@ std::optional<MessageData> MessageData::from_database_row(const SQLite::Statemen
         return std::nullopt;
     }
 
-    // --- GETTING THE TEXT ---
     std::optional<std::string> body_opt;
 
     const auto& text_column = query_row.getColumn("text");
     if (!text_column.isNull()) {
         body_opt = text_column.getString();
-    }
-    else {
+    } else {
         const auto& blob_column = query_row.getColumn("attributedBody");
         if (!blob_column.isNull()) {
             const void* blob_data = blob_column.getBlob();
@@ -32,13 +30,16 @@ std::optional<MessageData> MessageData::from_database_row(const SQLite::Statemen
         }
     }
 
-    // This check now catches both parsing failures and empty strings.
     if (!body_opt.has_value() || body_opt.value().empty()) {
-        std::cerr << "Warning: Failed to parse message body for row: "<< std::endl;
+        std::cerr << "Warning: Attributed string failed to parse message body for row."<< std::endl;
         return std::nullopt;
     }
 
-    // --- (The rest of your function is correct) ---
+    if (invalid_imessage_body(body_opt.value())) {
+        std::cerr << "Warning: Message body contains invalid iMessage characters, skipping." << std::endl;
+        return std::nullopt;
+    }
+
     const long long raw_date = query_row.getColumn("date");
     auto timestamp = convert_apple_timestamp(raw_date);
     const int handle_id = query_row.getColumn("handle_id");
@@ -46,6 +47,36 @@ std::optional<MessageData> MessageData::from_database_row(const SQLite::Statemen
 
     return MessageData(body_opt.value(), timestamp, handle_id, is_from_me);
 }
+
+bool MessageData::invalid_imessage_body(const std::string& text) {
+    // The Unicode range U+FFF0 to U+FFFF is encoded in UTF-8 as a 3-byte sequence.
+    // The first byte is always 0xEF.
+    // The second byte is always 0xBF.
+    // The third byte ranges from 0xB0 to 0xBF.
+    
+    // We can iterate up to length - 2 because we need to read 3 bytes at a time.
+    if (text.length() < 3) {
+        return false;
+    }
+
+    for (size_t i = 0; i <= text.length() - 3; ++i) {
+        // To prevent sign extension issues with char, cast to an unsigned type.
+        const uint8_t byte1 = static_cast<uint8_t>(text[i]);
+        const uint8_t byte2 = static_cast<uint8_t>(text[i+1]);
+        const uint8_t byte3 = static_cast<uint8_t>(text[i+2]);
+
+        if (byte1 == 0xEF && byte2 == 0xBF) {
+            if (byte3 >= 0xB0 && byte3 <= 0xBF) {
+                // Found a character in the U+FFF0 to U+FFFF range.
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+
 
 // It takes a string_view to avoid making unnecessary copies
 std::string MessageData::drop_leading_chars(std::string_view sv, int count) {
