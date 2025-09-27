@@ -1,4 +1,4 @@
-def categorize_query(query)->str:
+def categorize_query(query) -> str:
     query = query.lower()
 
     pdf_keywords = ['pdf', 'document', 'file']

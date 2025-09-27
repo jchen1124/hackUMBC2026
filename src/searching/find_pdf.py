@@ -8,8 +8,6 @@ def load_pdf() -> list[str]:
     return pdf_list
 
 
-
-
 #find pdf
 def find_pdf(query: str, pdf_list: list[str]) -> str | None:
     """Find the best matching PDF filename."""

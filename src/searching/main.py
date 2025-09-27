@@ -19,6 +19,10 @@ def main():
         else:
             print("No matching PDF found.")
 
+    elif category == 'message':
+        pass
+
+
 
 if __name__ == "__main__":
     main()

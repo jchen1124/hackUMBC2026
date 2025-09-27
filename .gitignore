@@ -185,6 +185,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+myenv/
 
 # Spyder project settings
 .spyderproject
@@ -269,7 +270,7 @@ vcpkg_installed/
 .history
 .ionide
 
-myenv/
+# Files ignored in searching folder
 pdf_files.txt
 
 # End of https://www.toptal.com/developers/gitignore/api/c++,visualstudiocode,python,database,vcpkg,react
