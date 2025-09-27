@@ -20,7 +20,7 @@ def main():
         db.populate_database()
 
         # 3. Retrieve and print contacts        
-        db.save_to_sql("output.db")
+        db.save_to_sql("out/output.db")
 
     except Exception as e:
         print(f"\nAn error occurred: {e}")
