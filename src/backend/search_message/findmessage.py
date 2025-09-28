@@ -7,6 +7,9 @@ def search_imessages(query: str, top_k: int = 5):
     Performs a fuzzy search for messages in the database using rapidfuzz.
     Always returns a string, either with results or a 'not found' message.
     """
+    # Clean the query to remove the "search" keyword for better matching
+    cleaned_query = query.lower().replace('search', '').strip()
+
     try:
         # ---------- 1. Connect to the database and load all messages ----------
         db_path = os.path.join("out", "output.db")
@@ -35,7 +38,7 @@ def search_imessages(query: str, top_k: int = 5):
         
         # 'process.extract' finds the best matches from a list of choices.
         # It returns a list of tuples: (text, score, original_index)
-        matches = process.extract(query, message_map.keys(), limit=top_k, score_cutoff=60)
+        matches = process.extract(cleaned_query, message_map.keys(), limit=top_k, score_cutoff=60)
 
         if not matches:
             return f"No messages found that closely match your query: '{query}'"

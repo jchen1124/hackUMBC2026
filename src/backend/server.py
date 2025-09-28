@@ -5,21 +5,19 @@ from flask import Flask, request, jsonify, url_for, send_from_directory
 from flask_cors import CORS
 
 # --- Import your custom logic modules ---
-from summarize.summarize import main as get_conversation_summary
+from summarize.summarize import handle_summarize_request
 from find_pdf.find_pdf import load_pdf, find_pdf
 from search_message.findmessage import search_imessages
 
-# --- INITIALIZE THE FLASK APP AND CONFIGURATION ---
+# --- INITIALIZE THE FLASK APP ---
 app = Flask(__name__)
 # Allow requests from your React app's origin
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
-# Define the folder where found PDFs will be copied to be served publicly.
-# This path is relative to the project root.
-UPLOAD_FOLDER = os.path.join('src', 'backend', 'uploads')
+# --- CONFIGURATION ---
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-# Ensure the upload folder exists.
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 # --- INTENT CLASSIFICATION UTILITY ---
@@ -28,24 +26,25 @@ def categorize_query(query: str) -> str:
     query = query.lower().strip()
     pdf_keywords = ['pdf', 'document', 'file', 'attachment']
     summarize_keywords = ['summarize', 'summary', 'tldr', 'recap']
+
     found = []
     if any(word in query for word in summarize_keywords):
         found.append('summarize')
     if any(word in query for word in pdf_keywords):
         found.append('pdf')
+
+    # Default to 'message' intent if no other keywords are found
     return ','.join(found) if found else 'message'
 
 
-# --- NEW ENDPOINT TO SERVE THE COPIED FILES ---
-@app.route('/uploads/<path:filename>')
+# --- FILE SERVING ENDPOINT ---
+@app.route('/files/<filename>')
 def serve_file(filename):
-    """
-    This endpoint serves files from the UPLOAD_FOLDER, making them accessible to the frontend.
-    """
+    """Serves files from the UPLOAD_FOLDER."""
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
-# --- MAIN API ENDPOINT ---
+# --- API ENDPOINT ---
 @app.route("/api/ai-response", methods=["POST"])
 def handle_ai_response():
     """
@@ -64,65 +63,70 @@ def handle_ai_response():
     # --- Route to the appropriate logic based on the detected intent ---
     if 'summarize' in intent:
         print("Routing to conversation summarization...")
-        content = get_conversation_summary()
-        return jsonify({
-            'content': content,
-            'is_summarize': True,
-            'is_message': False,
-            'timestamp': datetime.datetime.now().isoformat()
-        })
+        print(f"User message: '{user_message}'")
+        
+        # Use the new enhanced summarize handler
+        result = handle_summarize_request(user_message, "out/output.db")
+        
+        # Return appropriate response based on whether there was an error
+        if 'error' in result:
+            return jsonify(result), 400  # Return error with 400 status
+        else:
+            return jsonify(result)  # Return successful summary
 
     elif 'pdf' in intent:
-        print("Routing to PDF search and file serving...")
+        print("Routing to PDF search...")
         all_pdfs = load_pdf()
         found_pdf_info = find_pdf(user_message, all_pdfs)
         
+        print(f"Here is the pdfs{all_pdfs}")
+
         if found_pdf_info:
             filename = found_pdf_info.get('filename')
-            # The full_path from the DB (e.g., '~/Library/...') needs the ~ expanded.
-            original_path = os.path.expanduser(found_pdf_info.get('full_path'))
-            destination_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            full_path = found_pdf_info.get('full_path')
             
-            try:
-                # Copy the file to the public 'uploads' folder if it's not already there.
-                if not os.path.exists(destination_path):
-                    shutil.copy2(original_path, destination_path)
-                
-                # Generate a public URL for the copied file.
+            if filename and full_path and os.path.exists(full_path):
+                destination = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                shutil.copy2(full_path, destination)
                 file_url = url_for('serve_file', filename=filename, _external=True)
                 
                 return jsonify({
-                    "content": f"I found the file you asked for: {filename}",
+                    "content": f"I found the file: {filename}",
                     "file_url": file_url,
                     "file_name": filename,
                     "file_type": "pdf",
-                    "timestamp": datetime.datetime.now().isoformat(),
-                    "is_message": False,
-                    "is_pdf": True
+                    "is_pdf": True,
+                    "timestamp": datetime.datetime.now().isoformat()
                 })
-            except FileNotFoundError:
-                return jsonify({
-                    "content": f"I located the PDF file '{filename}' in the database, but couldn't access it on your computer at the path: {original_path}",
-                    "timestamp": datetime.datetime.now().isoformat(),
-                    "is_message": True
-                })
-        else:
-            return jsonify({
-                "content": "Sorry, I couldn't find a PDF matching that description.",
-                "timestamp": datetime.datetime.now().isoformat(),
-                "is_message": True
-            })
+        
+        return jsonify({
+            "content": "Sorry, I couldn't find a PDF matching that description.",
+            "is_pdf": True,
+            "timestamp": datetime.datetime.now().isoformat()
+        })
 
-    else:  # Default case for 'message' intent
-        print("Routing to semantic message search...")
-        content = search_imessages(query=user_message, top_k=5)
+    else:  # Default case for 'message' intent (fuzzy search)
+        print("Routing to fuzzy message search...")
+        
+        # Clean the query to remove common instruction words for better results
+        cleaned_query = user_message.lower()
+        for word in ['search for', 'search', 'find']:
+            cleaned_query = cleaned_query.replace(word, '')
+        cleaned_query = cleaned_query.strip()
+        
+        # Use the original message if cleaning results in an empty string
+        final_query = cleaned_query if cleaned_query else user_message
+
+        content = search_imessages(query=final_query, top_k=5)
         if not content:
             content = "I couldn't find any messages that matched your query."
+        
         return jsonify({
             'content': content,
             'is_message': True,
             'timestamp': datetime.datetime.now().isoformat()
         })
+
 
 # --- RUN THE SERVER ---
 if __name__ == "__main__":
