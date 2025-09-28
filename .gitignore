@@ -5,6 +5,8 @@ res/*
 out/*
 *.db
 
+src/backend/uploads
+
 errors.txt
 output
 
