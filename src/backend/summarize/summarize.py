@@ -71,23 +71,12 @@ def process_all_conversations(db_path: str, contact_handle_ids: list[int]):
                                 ])
 
             print(f"Summary: {summary['message']['content']}\n")
-<<<<<<< HEAD:src/summarize/summarize.py
-            stop = True
-        if stop:
-            break
-
-=======
             
->>>>>>> b00b161 (adding summary):src/backend/summarize/summarize.py
     conn.close()
 
 
 def main():
-<<<<<<< HEAD:src/summarize/summarize.py
     db_path = 'out/output.db'
-=======
-    db_path = os.path.expanduser("~/Library/Messages/chat.db")
->>>>>>> b00b161 (adding summary):src/backend/summarize/summarize.py
     
     # In a real scenario, you would fetch these from your contacts table
     handle_ids_to_process = [79] # Example list of 3 contacts

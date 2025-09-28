@@ -122,11 +122,11 @@ def main() -> str:
     Main function that always returns a string summary.
     This function takes no arguments.
     """
-    db_path = os.path.expanduser("~/Library/Messages/chat.db")
+    db_path = os.path.expanduser("out/output.db")
     
     # These are example handle IDs - you may need to adjust these
     # You can find actual handle IDs by querying: SELECT DISTINCT handle_id FROM message LIMIT 20;
-    handle_ids_to_process = [29]
+    handle_ids_to_process = [10]
     
     try:
         result = process_all_conversations(db_path, handle_ids_to_process)
