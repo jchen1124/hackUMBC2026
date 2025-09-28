@@ -1,7 +1,11 @@
 import sqlite3
 import itertools
 from operator import itemgetter
-from ollama import chat, ollama
+import ollama
+
+
+SYSTEM_PROMPT = f"You are an assistant that summarizes conversations. Summarize the following conversation that took place in."
+
 
 def process_all_conversations(db_path: str, contact_handle_ids: list[int]):
     """
@@ -53,17 +57,17 @@ def process_all_conversations(db_path: str, contact_handle_ids: list[int]):
                 conversation_lines.append(f"{row['date_time']}\t{prefix}{row['text']}")
             
             conversation = "\n".join(conversation_lines)
-            print(conversation)
             
-            # Here is where you would call Ollama for this specific conversation chunk
-            # prompt = f"Summarize the following conversation between me and my contact for {year}-{month}:\n\n{conversation}\n\nSummary:"
-            # summary = ollama.chat(model="llama2",
-            #                       messages=[
-            #                         {'role':'system', 'content':prompt },
-            #                         {'role':'user', 'content':conversation}
-                                      
-            #                           ])
-            # print(f"Summary: {summary}\n")
+            # The system prompt only contains the instructions
+
+            # The user message only contains the raw conversation data
+            summary = ollama.chat(model="llama3",  # I've updated the model here
+                                messages=[
+                                    {'role': 'system', 'content': SYSTEM_PROMPT },
+                                    {'role': 'user', 'content': conversation }
+                                ])
+
+            print(f"Summary: {summary['message']['content']}\n")
 
     conn.close()
 
@@ -77,18 +81,7 @@ def main():
     # For all 88 contacts, you would build this list first
     # handle_ids_to_process = get_all_contact_ids() 
     
-    # Here is where you would call Ollama for this specific conversation chunk
-    prompt = f"Summarize the following conversation between me and my contact for {year}-{month}:\n\n{conversation}\n\nSummary:"
-    summary = ollama.chat(model="llama2",
-                          messages=[
-                            {'role':'system', 'content':prompt },
-                            {'role':'user', 'content':conversation}
-                                
-                              ])
-    print(f"Summary: {summary}\n")
-
-
-    # process_all_conversations(db_path, handle_ids_to_process)
+    process_all_conversations(db_path, handle_ids_to_process)
 
 
 if __name__ == "__main__":
