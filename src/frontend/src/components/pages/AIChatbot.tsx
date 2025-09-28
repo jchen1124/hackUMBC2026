@@ -13,6 +13,7 @@ interface Message {
   fileName?: string;
   fileType?: string;
   isMessageResponse?: boolean;
+  isSummarizeResponse?: boolean;
 }
 
 interface AIChatbotProps {
@@ -65,6 +66,11 @@ export default function AIChatbot({ className = "" }: AIChatbotProps) {
 
   // Format message content for quote-style display
   const formatQuoteContent = (content: string) => {
+    // Handle null/undefined content
+    if (!content) {
+      return <p className="message-text">No content available</p>;
+    }
+
     const items = content.split('\n\n\n').filter(item => item.trim());
     
     if (items.length <= 1) {
@@ -141,7 +147,6 @@ export default function AIChatbot({ className = "" }: AIChatbotProps) {
                   letterSpacing: '-0.1px'
                 }}>{item.trim()}</p>
               </div>
-            
             </div>
           </div>
         ))}
@@ -184,19 +189,21 @@ export default function AIChatbot({ className = "" }: AIChatbotProps) {
 
       const data = await res.json();
       const isMessageResponse = data.is_message === true;
+      const isSummarizeResponse = data.is_summarize === true;
 
       setMessages(prev =>
         prev.map(msg =>
           msg.isTyping
             ? { 
                 ...msg, 
-                content: data.content, 
+                content: data.content || "No content received", 
                 isTyping: false,
                 timestamp: new Date(data.timestamp || Date.now()),
                 fileUrl: data.file_url,
                 fileName: data.file_name,
                 fileType: data.file_type,
-                isMessageResponse: isMessageResponse
+                isMessageResponse: isMessageResponse,
+                isSummarizeResponse: isSummarizeResponse
               }
             : msg
         )
@@ -271,7 +278,7 @@ export default function AIChatbot({ className = "" }: AIChatbotProps) {
                     </div>
                   ) : (
                     <>
-                      {message.isMessageResponse ? 
+                      {message.isMessageResponse || message.isSummarizeResponse ? 
                         formatQuoteContent(message.content) : 
                         <p className="message-text">{message.content}</p>
                       }
