@@ -8,6 +8,8 @@ out/*
 errors.txt
 output
 
+myenv311/
+
 # But DO NOT ignore the .gitkeep files inside them
 !res/.gitkeep
 !out/.gitkeep
