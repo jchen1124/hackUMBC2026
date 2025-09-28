@@ -39,6 +39,9 @@ def process_all_conversations(db_path: str, contact_handle_ids: list[int]):
     # Execute the single, powerful query
     cursor.execute(query, contact_handle_ids)
 
+
+    stop = False
+
     # Group all messages by contact (handle_id)
     for handle_id, messages_for_contact in itertools.groupby(cursor, key=itemgetter('handle_id')):
         print(f"\n===== Processing Contact handle_id: {handle_id} =====")
@@ -68,15 +71,18 @@ def process_all_conversations(db_path: str, contact_handle_ids: list[int]):
                                 ])
 
             print(f"Summary: {summary['message']['content']}\n")
+            stop = True
+        if stop:
+            break
 
     conn.close()
 
 
 def main():
-    db_path = 'out/jason.db'
+    db_path = 'out/output.db'
     
     # In a real scenario, you would fetch these from your contacts table
-    handle_ids_to_process = [10, 4, 500] # Example list of 3 contacts
+    handle_ids_to_process = [79] # Example list of 3 contacts
     
     # For all 88 contacts, you would build this list first
     # handle_ids_to_process = get_all_contact_ids() 
