@@ -1,0 +1,12 @@
+{
+  "name": "your-project-name",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm:dev:frontend\" \"npm:dev:backend\"",
+    "dev:frontend": "cd src/frontEnd && npm start",
+    "dev:backend": "python src/backend/server.py"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
