@@ -85,53 +85,7 @@ def create_conversation_plots(contact_yearly_data, contact_monthly_data, contact
     Creates bar graphs showing conversation frequency over time.
     """
     
-    # # 1. Yearly conversation frequency for each contact
-    # plt.figure(figsize=(15, 8))
-    
-    # if len(contact_yearly_data) == 1:
-    #     # Single contact - show their yearly data
-    #     contact_id = list(contact_yearly_data.keys())[0]
-    #     yearly_data = contact_yearly_data[contact_id]
-        
-    #     years = sorted(yearly_data.keys())
-    #     counts = [yearly_data[year] for year in years]
-        
-    #     plt.bar(years, counts, color='skyblue', edgecolor='navy', alpha=0.7, width=0.6)
-    #     plt.title(f'Yearly Message Frequency - Contact {contact_id}', fontsize=16, fontweight='bold')
-    #     plt.xlabel('Year', fontsize=12)
-    #     plt.ylabel('Number of Messages', fontsize=12)
-    #     plt.xticks(rotation=45)
-        
-    # else:
-    #     # Multiple contacts - show comparison
-    #     all_years = set()
-    #     for yearly_data in contact_yearly_data.values():
-    #         all_years.update(yearly_data.keys())
-    #     all_years = sorted(all_years)
-        
-    #     bar_width = 0.8 / len(contact_yearly_data)
-    #     colors = ['skyblue', 'lightcoral', 'lightgreen', 'gold', 'plum']
-        
-    #     for idx, (contact_id, yearly_data) in enumerate(contact_yearly_data.items()):
-    #         counts = [yearly_data.get(year, 0) for year in all_years]
-    #         x_positions = [i + idx * bar_width for i in range(len(all_years))]
-            
-    #         plt.bar(x_positions, counts, bar_width, 
-    #                label=f'Contact {contact_id}', 
-    #                color=colors[idx % len(colors)], 
-    #                alpha=0.7)
-        
-    #     plt.xlabel('Year', fontsize=12)
-    #     plt.ylabel('Number of Messages', fontsize=12)
-    #     plt.title('Yearly Message Frequency Comparison', fontsize=16, fontweight='bold')
-    #     plt.xticks([i + bar_width * (len(contact_yearly_data) - 1) / 2 for i in range(len(all_years))], all_years)
-    #     plt.legend()
-    
-    # plt.tight_layout()
-    # plt.grid(axis='y', alpha=0.3)
-    # plt.show()
-    
-    # 2. Monthly timeline for the first contact (detailed view)
+
     if contact_monthly_data:
         first_contact = list(contact_monthly_data.keys())[0]
         monthly_data = contact_monthly_data[first_contact]
@@ -154,21 +108,7 @@ def create_conversation_plots(contact_yearly_data, contact_monthly_data, contact
         plt.tight_layout()
         plt.grid(axis='y', alpha=0.3)
         plt.show()
-    
-    # 3. Total messages per contact (summary view)
-    # if len(contact_totals) > 1:
-    #     plt.figure(figsize=(10, 6))
-    #     contacts = [f'Contact {c}' for c in contact_totals.keys()]
-    #     totals = list(contact_totals.values())
-        
-    #     plt.bar(contacts, totals, color='gold', edgecolor='orange', alpha=0.7)
-    #     plt.title('Total Messages by Contact', fontsize=16, fontweight='bold')
-    #     plt.xlabel('Contacts', fontsize=12)
-    #     plt.ylabel('Total Messages', fontsize=12)
-    #     plt.xticks(rotation=45)
-    #     plt.tight_layout()
-    #     plt.grid(axis='y', alpha=0.3)
-    #     plt.show()
+
 
 def create_clock_diagram(contact_hourly_data):
     """
@@ -247,7 +187,11 @@ def main():
     # handle_ids_to_process = get_all_contact_ids() 
     
     contact_yearly_data, contact_monthly_data, contact_totals, contact_hourly_data = plot_message_frequencies(db_path, handle_ids_to_process)
+    
+    # Bar graph diagram
     create_conversation_plots(contact_yearly_data, contact_monthly_data, contact_totals)
+    
+    # Clock Diagram
     create_clock_diagram(contact_hourly_data)
 
     # Create a summary DataFrame
