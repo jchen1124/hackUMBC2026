@@ -1,119 +1,77 @@
-
-
-# from dotenv import load_dotenv
-from collections import defaultdict
-from datetime import datetime
-import os
 import sqlite3
-import csv
-# import ollama
+import itertools
+from operator import itemgetter
 
+def process_all_conversations(db_path: str, contact_handle_ids: list[int]):
+    """
+    Fetches all messages for a list of contacts in a single query
+    and processes them by month.
+    """
+    # Create placeholders for the IN clause, e.g., (?, ?, ?)
+    placeholders = ', '.join(['?'] * len(contact_handle_ids))
+    
+    query = f"""
+        SELECT
+            handle_id,
+            strftime('%Y', date_time) AS year,
+            strftime('%m', date_time) AS month,
+            is_from_me,
+            text,
+            date_time
+        FROM
+            messages
+        WHERE
+            handle_id IN ({placeholders})
+        ORDER BY
+            handle_id, year, month, date_time ASC
+    """
 
-# Pass in list of indexes to summarize
-def get_text(month: str, year: int) -> str:
-    conn = sqlite3.connect('jason.db')
-    #used to send commands to da SQL database
+    conn = sqlite3.connect(db_path)
+    # This makes the cursor return rows that can be accessed by column name
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    month_str = month.lower()
 
-    cursor.execute(f"""
-                   SELECT is_from_me, text, date_time
-                   FROM messages
-                   WHERE strftime('%Y', date_time) = ?
-                   AND strftime('%m', date_time) = ?
-                   ORDER BY ROWID
-                   """, [str(year), month])
-    
-    results = cursor.fetchall()
-    # print(results)
+    # Execute the single, powerful query
+    cursor.execute(query, contact_handle_ids)
 
-    for row in results:
-        print(row)
+    # Group all messages by contact (handle_id)
+    for handle_id, messages_for_contact in itertools.groupby(cursor, key=itemgetter('handle_id')):
+        print(f"\n===== Processing Contact handle_id: {handle_id} =====")
+        
+        # Now, group this contact's messages by month
+        for month_key, messages_for_month in itertools.groupby(messages_for_contact, key=lambda r: (r['year'], r['month'])):
+            year, month = month_key
+            print(f"--- Processing messages for {year}-{month} ---")
 
-# def summarize_text(text) -> str:
-
-
-
-#     with open('messages.csv', 'w', newline='') as f:
-#         csvwriter = csv.writer(f)
-#         csvwriter.writerow(['is_from_me', 'text', 'date_time'])  # Write header
-#         for row in results:
-#             csvwriter.writerow(row)  # Write data rows
-
-# def summarize_text(text:) -> str:
-#     #open csv file
-
-
-if __name__ == "__main__":    
-    get_text("10", 2024)
-
+            conversation_lines = []
+            for row in messages_for_month:
+                if not row['text'] or not row['text'].strip():
+                    continue
                 
+                prefix = "Me: " if row['is_from_me'] else "Them: "
+                conversation_lines.append(f"{row['date_time']}\t{prefix}{row['text']}")
+            
+            conversation = "\n".join(conversation_lines)
+            print(conversation)
+            
+            # Here is where you would call Ollama for this specific conversation chunk
+            # summary = ollama.chat(...)
+            # print(f"Summary: ...\n")
+
+    conn.close()
 
 
-
-
-
-
-# def main():
-#     db_path = "out/output.db"
-#     summarize_messages_by_contact(db_path)
-
-
-# def summarize_messages_by_contact(db_path: str):
-#     """
-#     This function will take a path to the SQLite database and
-#     summarize the messages by contact and by month.
+def main():
+    db_path = 'out/output.db'
     
-#     Args:
-#         db_path: The path to the SQLite database.
-#     """
+    # In a real scenario, you would fetch these from your contacts table
+    handle_ids_to_process = [10, 4, 500] # Example list of 3 contacts
     
-#     if not os.path.exists(db_path):
-#         raise FileNotFoundError(f"The database file {db_path} does not exist.")
-
-#     conn = sqlite3.connect(db_path)
-#     cursor = conn.cursor()
-
-#     # First we're gonna get a list of the contacts
-#     cursor.execute("SELECT phone_number, first_name, last_name, imessage_handle_id FROM contacts WHERE imessage_handle_id IS NOT NULL")    
-#     contacts = cursor.fetchall()
-
-#     print(contacts)
-
-#     # Now we're gonna get the messages for each contact
-#     # We need to query the messages table by imessage_handle_id
-#     for contact in contacts[:1]:
-#         cursor.execute("SELECT text, date_time, is_from_me FROM messages WHERE handle_id = ?", (contact[3],))
-#         messages = cursor.fetchall()
-#         for msg in messages:
-#             print(msg)
+    # For all 88 contacts, you would build this list first
+    # handle_ids_to_process = get_all_contact_ids() 
+    
+    process_all_conversations(db_path, handle_ids_to_process)
 
 
-# def partition_messages_by_month(messages_vec, contact_name) -> list:
-#     """
-#     This function will take a vector of messages and partition them by month.
-#     It will then return a list of indexes where each index represents the start of a new month.
-#     This is so that we don't have to copy the entire vector of messages for each month each time.
-
-#     Args:
-#         messages_vec: A sorted vector of messages in descending order.
-#         contact_name: The name of the contact.
-#     """
-#     month_starts = []
-#     current_month = None
-
-#     # Date time looks like this:
-#     # 2025-04-24 15:05:11.000000
-
-#     for i, msg in enumerate(messages_vec):
-#         msg_date = datetime.fromtimestamp(msg['date_time'])
-#         msg_month = msg_date.strftime('%Y-%m')
-
-#         if msg_month != current_month:
-#             month_starts.append(i)
-#             current_month = msg_month
-
-#     return month_starts
-
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
