@@ -1,6 +1,7 @@
 import sqlite3
 import itertools
 from operator import itemgetter
+from ollama import chat, ollama
 
 def process_all_conversations(db_path: str, contact_handle_ids: list[int]):
     """
@@ -55,14 +56,20 @@ def process_all_conversations(db_path: str, contact_handle_ids: list[int]):
             print(conversation)
             
             # Here is where you would call Ollama for this specific conversation chunk
-            # summary = ollama.chat(...)
-            # print(f"Summary: ...\n")
+            # prompt = f"Summarize the following conversation between me and my contact for {year}-{month}:\n\n{conversation}\n\nSummary:"
+            # summary = ollama.chat(model="llama2",
+            #                       messages=[
+            #                         {'role':'system', 'content':prompt },
+            #                         {'role':'user', 'content':conversation}
+                                      
+            #                           ])
+            # print(f"Summary: {summary}\n")
 
     conn.close()
 
 
 def main():
-    db_path = 'out/output.db'
+    db_path = 'out/jason.db'
     
     # In a real scenario, you would fetch these from your contacts table
     handle_ids_to_process = [10, 4, 500] # Example list of 3 contacts
@@ -70,7 +77,18 @@ def main():
     # For all 88 contacts, you would build this list first
     # handle_ids_to_process = get_all_contact_ids() 
     
-    process_all_conversations(db_path, handle_ids_to_process)
+    # Here is where you would call Ollama for this specific conversation chunk
+    prompt = f"Summarize the following conversation between me and my contact for {year}-{month}:\n\n{conversation}\n\nSummary:"
+    summary = ollama.chat(model="llama2",
+                          messages=[
+                            {'role':'system', 'content':prompt },
+                            {'role':'user', 'content':conversation}
+                                
+                              ])
+    print(f"Summary: {summary}\n")
+
+
+    # process_all_conversations(db_path, handle_ids_to_process)
 
 
 if __name__ == "__main__":

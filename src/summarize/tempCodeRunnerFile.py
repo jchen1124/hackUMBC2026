@@ -1,2 +1,1 @@
-for row in results:
-    #     print(row)
+from ollama import chat, ollama
