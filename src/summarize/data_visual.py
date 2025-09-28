@@ -85,22 +85,22 @@ def create_conversation_plots(contact_yearly_data, contact_monthly_data, contact
     Creates bar graphs showing conversation frequency over time.
     """
     
-    # 1. Yearly conversation frequency for each contact
-    plt.figure(figsize=(15, 8))
+    # # 1. Yearly conversation frequency for each contact
+    # plt.figure(figsize=(15, 8))
     
-    if len(contact_yearly_data) == 1:
-        # Single contact - show their yearly data
-        contact_id = list(contact_yearly_data.keys())[0]
-        yearly_data = contact_yearly_data[contact_id]
+    # if len(contact_yearly_data) == 1:
+    #     # Single contact - show their yearly data
+    #     contact_id = list(contact_yearly_data.keys())[0]
+    #     yearly_data = contact_yearly_data[contact_id]
         
-        years = sorted(yearly_data.keys())
-        counts = [yearly_data[year] for year in years]
+    #     years = sorted(yearly_data.keys())
+    #     counts = [yearly_data[year] for year in years]
         
-        plt.bar(years, counts, color='skyblue', edgecolor='navy', alpha=0.7, width=0.6)
-        plt.title(f'Yearly Message Frequency - Contact {contact_id}', fontsize=16, fontweight='bold')
-        plt.xlabel('Year', fontsize=12)
-        plt.ylabel('Number of Messages', fontsize=12)
-        plt.xticks(rotation=45)
+    #     plt.bar(years, counts, color='skyblue', edgecolor='navy', alpha=0.7, width=0.6)
+    #     plt.title(f'Yearly Message Frequency - Contact {contact_id}', fontsize=16, fontweight='bold')
+    #     plt.xlabel('Year', fontsize=12)
+    #     plt.ylabel('Number of Messages', fontsize=12)
+    #     plt.xticks(rotation=45)
         
     # else:
     #     # Multiple contacts - show comparison
