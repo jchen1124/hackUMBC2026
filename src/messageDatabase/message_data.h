@@ -37,4 +37,6 @@ public:
     const std::string& get_text() const { return m_text; }
     const std::chrono::time_point<std::chrono::system_clock>& get_date_time() const { return m_date_time; }
     unsigned int get_handle_id() const { return m_handle_id; }
-    bool is_from_me() const { return m_is_from_me; }};
+    bool is_from_me() const { return m_is_from_me; }
+
+};

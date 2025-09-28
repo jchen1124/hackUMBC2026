@@ -160,8 +160,28 @@ void Database::enrich_contacts_from_db() {
 
 void Database::populate_messages() {
     try {
-        SQLite::Statement query(m_db, "SELECT text, attributedBody, date, handle_id, is_from_me, cache_has_attachments FROM message");
-
+        // Use the new, more robust query
+        SQLite::Statement query(m_db, "SELECT "
+                    "T1.text, T1.attributedBody, T1.date, T1.is_from_me, "
+                    "T1.cache_has_attachments, T1.is_audio_message, T1.was_data_detected, T1.item_type, "
+                    "CASE "
+                        "WHEN T1.is_from_me = 1 THEN ( "
+                            "SELECT T4.handle_id "
+                            "FROM chat_handle_join AS T4 "
+                            "WHERE T4.chat_id = T2.chat_id AND T4.handle_id != 0 "
+                            "LIMIT 1 "
+                        ") "
+                        "ELSE T1.handle_id "
+                    "END AS effective_handle_id "
+                    "FROM message AS T1 "
+                    "JOIN chat_message_join AS T2 ON T1.ROWID = T2.message_id "
+                    "JOIN ( "
+                        "SELECT chat_id FROM chat_handle_join "
+                        "GROUP BY chat_id "
+                        "HAVING COUNT(handle_id) <= 2 "
+                    ") AS T3 ON T2.chat_id = T3.chat_id "
+                    "WHERE T1.balloon_bundle_id IS NULL");
+            
         while (query.executeStep()) {
             if (auto msg_opt = MessageData::from_database_row(query)) {
                 m_messages.push_back(msg_opt.value());

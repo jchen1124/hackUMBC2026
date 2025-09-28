@@ -5,6 +5,9 @@ res/*
 out/*
 *.db
 
+errors.txt
+output
+
 # But DO NOT ignore the .gitkeep files inside them
 !res/.gitkeep
 !out/.gitkeep

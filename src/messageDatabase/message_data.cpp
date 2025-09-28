@@ -6,15 +6,15 @@ MessageData::MessageData(std::string text, std::chrono::time_point<std::chrono::
 
 std::optional<MessageData> MessageData::from_database_row(const SQLite::Statement& query_row) {
     // Get the column value as an integer first
-    const int cache_has_attachments_int = query_row.getColumn("cache_has_attachments").getInt();
-
-    // Then, convert the integer to a boolean
-    const bool cache_has_attachments = (cache_has_attachments_int != 0);
-
-    // If there are attachments, skip this message for now
-    if (cache_has_attachments) {
+    const int cache_has_attachments = query_row.getColumn("cache_has_attachments").getInt();
+    const int is_audio_message = query_row.getColumn("is_audio_message").getInt();
+    const int was_data_detected = query_row.getColumn("was_data_detected").getInt();
+    const int item_type = query_row.getColumn("item_type").getInt();
+    if (cache_has_attachments || is_audio_message || !was_data_detected || item_type != 0) {
+        std::cerr << "Info: Skipping non-text message (attachment/audio/detected data/item_type)." << std::endl;
         return std::nullopt;
     }
+
 
     std::optional<std::string> body_opt;
 
@@ -30,7 +30,7 @@ std::optional<MessageData> MessageData::from_database_row(const SQLite::Statemen
         }
     }
 
-    if (!body_opt.has_value() || body_opt.value().empty()) {
+    if (!body_opt.has_value()) {
         std::cerr << "Warning: Attributed string failed to parse message body for row."<< std::endl;
         return std::nullopt;
     }
@@ -42,40 +42,62 @@ std::optional<MessageData> MessageData::from_database_row(const SQLite::Statemen
 
     const long long raw_date = query_row.getColumn("date");
     auto timestamp = convert_apple_timestamp(raw_date);
-    const int handle_id = query_row.getColumn("handle_id");
+    // Use the new "effective_handle_id" column from our query
+    const int handle_id = query_row.getColumn("effective_handle_id"); 
+    
     const bool is_from_me = query_row.getColumn("is_from_me").getInt();
 
     return MessageData(body_opt.value(), timestamp, handle_id, is_from_me);
 }
 
 bool MessageData::invalid_imessage_body(const std::string& text) {
-    // The Unicode range U+FFF0 to U+FFFF is encoded in UTF-8 as a 3-byte sequence.
-    // The first byte is always 0xEF.
-    // The second byte is always 0xBF.
-    // The third byte ranges from 0xB0 to 0xBF.
+    if (text.empty()) {
+        return true; // An empty string is not invalid.
+    }
     
-    // We can iterate up to length - 2 because we need to read 3 bytes at a time.
-    if (text.length() < 3) {
-        return false;
+    if (text.length() == 1 && text[0] == ' ') {
+        return true;
     }
 
-    for (size_t i = 0; i <= text.length() - 3; ++i) {
-        // To prevent sign extension issues with char, cast to an unsigned type.
-        const uint8_t byte1 = static_cast<uint8_t>(text[i]);
-        const uint8_t byte2 = static_cast<uint8_t>(text[i+1]);
-        const uint8_t byte3 = static_cast<uint8_t>(text[i+2]);
+    for (auto it = text.begin(); it != text.end(); ++it) {
+        uint32_t codepoint = 0;
+        uint8_t first_byte = static_cast<uint8_t>(*it);
 
-        if (byte1 == 0xEF && byte2 == 0xBF) {
-            if (byte3 >= 0xB0 && byte3 <= 0xBF) {
-                // Found a character in the U+FFF0 to U+FFFF range.
-                return true;
-            }
+        // 1. Validate UTF-8 encoding and decode the codepoint
+        if (first_byte <= 0x7F) { // Single-byte ASCII
+            codepoint = first_byte;
+        } else if ((first_byte & 0xE0) == 0xC0) { // 2-byte sequence
+            if (++it == text.end() || (*it & 0xC0) != 0x80) return true; // Invalid sequence
+            codepoint = ((first_byte & 0x1F) << 6) | (*it & 0x3F);
+        } else if ((first_byte & 0xF0) == 0xE0) { // 3-byte sequence
+            if (++it == text.end() || (*it & 0xC0) != 0x80) return true;
+            if (++it == text.end() || (*it & 0xC0) != 0x80) return true;
+            codepoint = ((first_byte & 0x0F) << 12) | ((*(it - 1) & 0x3F) << 6) | (*it & 0x3F);
+        } else if ((first_byte & 0xF8) == 0xF0) { // 4-byte sequence
+            if (++it == text.end() || (*it & 0xC0) != 0x80) return true;
+            if (++it == text.end() || (*it & 0xC0) != 0x80) return true;
+            if (++it == text.end() || (*it & 0xC0) != 0x80) return true;
+            codepoint = ((first_byte & 0x07) << 18) | ((*(it - 2) & 0x3F) << 12) | ((*(it - 1) & 0x3F) << 6) | (*it & 0x3F);
+        } else {
+            return true; // Invalid starting byte for a UTF-8 sequence
+        }
+
+        // 2. Filter out undesirable Unicode categories
+        // Check for non-printable ASCII control characters (except for tab, newline, etc.)
+        if (codepoint <= 0x1F && codepoint != '\t' && codepoint != '\n' && codepoint != '\r') {
+            return true;
+        }
+        // Check for characters in the Private Use Areas (PUA) and Specials
+        if ((codepoint >= 0xE000 && codepoint <= 0xF8FF) ||
+            (codepoint >= 0xFFF0 && codepoint <= 0xFFFF)) {
+            // This range includes U+FFFC (Object Replacement Character for attachments)
+            // and U+FFFD (Replacement Character for decoding errors).
+            return true;
         }
     }
 
-    return false;
+    return false; // No invalid characters found
 }
-
 
 
 // It takes a string_view to avoid making unnecessary copies
