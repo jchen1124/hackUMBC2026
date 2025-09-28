@@ -277,5 +277,6 @@ vcpkg_installed/
 
 # Files ignored in searching folder
 pdf_files.txt
+*.csv
 
 # End of https://www.toptal.com/developers/gitignore/api/c++,visualstudiocode,python,database,vcpkg,react

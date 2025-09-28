@@ -1,9 +1,57 @@
+<<<<<<< HEAD
+=======
+# from dotenv import load_dotenv
+>>>>>>> d10ce4a (getting messages for specific month)
 from collections import defaultdict
 from datetime import datetime
 import os
 import sqlite3
+import csv
+# import ollama
 
-connection = sqlite3.connect('jason.db')
+
+# Pass in list of indexes to summarize
+def get_text(name_other: str, month: str, year: int) -> str:
+    conn = sqlite3.connect('jason.db')
+    #used to send commands to da SQL database
+    cursor = conn.cursor()
+    month_str = month.lower()
+
+    placeholders = ','.join(['?' for _ in text_range])
+
+    cursor.execute(f"""
+                   SELECT is_from_me, text, date_time
+                   FROM messages
+                   WHERE ROWID in ({placeholders})
+                   AND strftime('%Y', date_time) = ?
+                   AND strftime('%m', date_time) = ?
+                   ORDER BY ROWID
+                   """, text_range + [str(year), month])
+    
+    results = cursor.fetchall()
+    # print(results)
+
+    for row in results:
+        print(row)
+
+#     with open('messages.csv', 'w', newline='') as f:
+#         csvwriter = csv.writer(f)
+#         csvwriter.writerow(['is_from_me', 'text', 'date_time'])  # Write header
+#         for row in results:
+#             csvwriter.writerow(row)  # Write data rows
+
+# def summarize_text(text:) -> str:
+#     #open csv file
+
+
+if __name__ == "__main__":    
+    get_text("Jason", "10", 2024)
+
+                
+
+
+
+
 
 
 def main():
