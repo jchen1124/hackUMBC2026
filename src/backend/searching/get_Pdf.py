@@ -2,7 +2,7 @@ import sqlite3
 import os
 
 # Path to iMessage database
-db_path = os.path.expanduser("~/Library/Messages/chat.db")
+db_path = os.path.expanduser("out/output.db")
 
 # Connect to the database in read-only mode
 conn = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)

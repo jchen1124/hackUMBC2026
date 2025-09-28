@@ -7,7 +7,7 @@ from chromadb.utils import embedding_functions
 
 def search_imessages(query: str, top_k: int = 5 ):
     # ---------- 1. Load messages from iMessage ----------
-    db_path = os.path.expanduser("~/Library/Messages/chat.db")
+    db_path = os.path.expanduser("out/output.db")
     conn = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)
     cursor = conn.cursor()
 

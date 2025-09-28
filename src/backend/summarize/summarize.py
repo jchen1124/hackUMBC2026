@@ -3,89 +3,131 @@ import itertools
 from operator import itemgetter
 import ollama
 import os
+import datetime
 
-SYSTEM_PROMPT = f"You are an assistant that summarizes conversations. Summarize the following conversation that took place in."
+SYSTEM_PROMPT = "You are an assistant that summarizes conversations. Summarize the following conversation concisely, highlighting key topics and important moments."
 
+def apple_time_to_datetime(apple_time: int) -> str:
+    """Convert Apple's iMessage timestamp to human-readable string."""
+    try:
+        if apple_time and apple_time > 0:
+            return (datetime.datetime(2001, 1, 1) +
+                    datetime.timedelta(seconds=apple_time/1e9)).strftime("%Y-%m-%d %H:%M:%S")
+    except:
+        pass
+    return ""
 
-def process_all_conversations(db_path: str, contact_handle_ids: list[int]):
+def process_all_conversations(db_path: str, contact_handle_ids: list[int]) -> str:
     """
-    Fetches all messages for a list of contacts in a single query
-    and processes them by month.
+    Process conversations by year/month for given contacts and return a summary string.
+    Always returns a string, never None.
     """
-    # Create placeholders for the IN clause, e.g., (?, ?, ?)
-    placeholders = ', '.join(['?'] * len(contact_handle_ids))
+    if not os.path.exists(db_path):
+        current_dir = os.getcwd()
+        return f"Error: Messages database not found. Make sure you're running this on macOS with Messages app enabled. {current_dir}, DB Path: {db_path}"
     
+    placeholders = ', '.join(['?'] * len(contact_handle_ids))
     query = f"""
         SELECT
             handle_id,
-            strftime('%Y', date_time) AS year,
-            strftime('%m', date_time) AS month,
+            date_time,
             is_from_me,
-            text,
-            date_time
-        FROM
-            message
-        WHERE
-            handle_id IN ({placeholders})
-        ORDER BY
-            handle_id, year, month, date_time ASC
+            text
+        FROM messages
+        WHERE handle_id IN ({placeholders})
+            AND text IS NOT NULL
+            AND text != ''
+        ORDER BY handle_id, date_time ASC
     """
-
-    conn = sqlite3.connect(db_path)
-    # This makes the cursor return rows that can be accessed by column name
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # Execute the single, powerful query
-    cursor.execute(query, contact_handle_ids)
-
-
-    stop = False
-
-    # Group all messages by contact (handle_id)
-    for handle_id, messages_for_contact in itertools.groupby(cursor, key=itemgetter('handle_id')):
-        print(f"\n===== Processing Contact handle_id: {handle_id} =====")
+    
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(query, contact_handle_ids)
         
-        # Now, group this contact's messages by month
-        for month_key, messages_for_month in itertools.groupby(messages_for_contact, key=lambda r: (r['year'], r['month'])):
-            year, month = month_key
-            print(f"--- Processing messages for {year}-{month} ---")
-
-            conversation_lines = []
-            for row in messages_for_month:
-                if not row['text'] or not row['text'].strip():
+        summaries = []
+        total_conversations = 0
+        
+        # Group by contact
+        for handle_id, messages_for_contact in itertools.groupby(cursor, key=itemgetter('handle_id')):
+            contact_summaries = []
+            
+            # Group by year-month using converted datetime
+            def ym_key(row):
+                dt_str = apple_time_to_datetime(row['date'])
+                if dt_str:
+                    try:
+                        dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+                        return (dt.year, dt.month)
+                    except:
+                        pass
+                return (None, None)
+            
+            for month_key, messages_for_month in itertools.groupby(messages_for_contact, key=ym_key):
+                year, month = month_key
+                if not year:
                     continue
                 
-                prefix = "Me: " if row['is_from_me'] else "Them: "
-                conversation_lines.append(f"{row['date_time']}\t{prefix}{row['text']}")
+                conversation_lines = []
+                message_count = 0
+                
+                for row in messages_for_month:
+                    if row['text'] and row['text'].strip():
+                        prefix = "Me" if row['is_from_me'] else "Them"
+                        conversation_lines.append(f"{prefix}: {row['text'].strip()}")
+                        message_count += 1
+                
+                if message_count < 3:
+                    continue
+                
+                conversation = "\n".join(conversation_lines)
+                
+                try:
+                    response = ollama.chat(
+                        model="llama3",
+                        messages=[
+                            {'role': 'system', 'content': SYSTEM_PROMPT},
+                            {'role': 'user', 'content': f"Summarize this conversation from {year}-{month:02d}:\n\n{conversation}"}
+                        ]
+                    )
+                    
+                    summary_text = response['message']['content'].strip()
+                    if summary_text:
+                        contact_summaries.append(f"**{year}-{month:02d} Summary:**\n{summary_text}")
+                        total_conversations += 1
+                        
+                except Exception as e:
+                    contact_summaries.append(f"**{year}-{month:02d}:** Error generating summary - {str(e)}")
             
-            conversation = "\n".join(conversation_lines)
+            if contact_summaries:
+                summaries.append(f"**Contact {handle_id} Conversations:**\n\n" + "\n\n\n".join(contact_summaries))
+        
+        conn.close()
+        
+        if summaries:
+            return "\n\n\n".join(summaries)
+        else:
+            return "No conversations found with enough messages to summarize. Try checking different contact IDs or ensure there are sufficient messages in the database."
             
-            # The system prompt only contains the instructions
+    except sqlite3.Error as e:
+        return f"Database error: {str(e)}"
+    except Exception as e:
+        return f"Unexpected error during summarization: {str(e)}"
 
-            # The user message only contains the raw conversation data
-            summary = ollama.chat(model="llama3",  # I've updated the model here
-                                messages=[
-                                    {'role': 'system', 'content': SYSTEM_PROMPT },
-                                    {'role': 'user', 'content': conversation }
-                                ])
-
-            print(f"Summary: {summary['message']['content']}\n")
-            
-    conn.close()
-
-
-def main():
-    db_path = 'out/output.db'
+def main() -> str:
+    """
+    Main function that always returns a string summary.
+    """
+    db_path = os.path.expanduser("../../../out/output.db")
     
-    # In a real scenario, you would fetch these from your contacts table
-    handle_ids_to_process = [79] # Example list of 3 contacts
+    # Example handle IDs - replace with actual ones from your DB
+    handle_ids_to_process = [10]
     
-    # For all 88 contacts, you would build this list first
-    # handle_ids_to_process = get_all_contact_ids() 
-    
-    process_all_conversations(db_path, handle_ids_to_process)
-
+    try:
+        return process_all_conversations(db_path, handle_ids_to_process)
+    except Exception as e:
+        return f"Critical error in summarization: {str(e)}"
 
 if __name__ == "__main__":
-    main()
+    print(main())

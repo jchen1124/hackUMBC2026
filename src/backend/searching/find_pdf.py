@@ -7,7 +7,7 @@ def load_pdf() -> list[dict]:
     Load all PDFs from iMessage database.
     Returns a list of dicts: {'filename': ..., 'full_path': ...}
     """
-    db_path = os.path.expanduser("~/Library/Messages/chat.db")
+    db_path = os.path.expanduser("out/output.db")
     conn = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)
     cursor = conn.cursor()
     

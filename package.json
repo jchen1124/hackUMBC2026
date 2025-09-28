@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "concurrently \"npm:dev:frontend\" \"npm:dev:backend\"",
     "dev:frontend": "cd src/frontEnd && npm start",
-    "dev:backend": "python src/backend/server.py"
+    "dev:backend": "flask --app src/backend/server.py --debug run"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

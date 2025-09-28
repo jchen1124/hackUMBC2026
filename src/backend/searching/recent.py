@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-def get_recent_conversations(db_path="~/Library/Messages/chat.db"):
+def get_recent_conversations(db_path="out/output.db"):
     """
     Fetch the most recent message for each contact from iMessage chat.db.
     

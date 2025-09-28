@@ -27,5 +27,5 @@ def list_message_columns(db_path: str):
 
 if __name__ == "__main__":
     # Path to your Messages DB on macOS
-    db_path = "~/Library/Messages/chat.db"
+    db_path = "out/output.db"
     list_message_columns(db_path)
