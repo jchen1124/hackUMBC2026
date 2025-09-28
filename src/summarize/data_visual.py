@@ -46,7 +46,7 @@ def plot_message_frequencies(db_path: str, contact_handle_ids: list[int]):
     contact_hourly_data = {}
 
     for handle_id, messages_for_contact in itertools.groupby(cursor, key=itemgetter('handle_id')):
-        print(f"\n===== Processing Contact handle_id: {handle_id} =====")
+        print(f"\n===== Processing Contact handle_id: {handle_id}  =====")
 
         yearly_counts = defaultdict(int)
         monthly_counts = defaultdict(int)
