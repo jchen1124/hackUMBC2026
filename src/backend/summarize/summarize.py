@@ -7,8 +7,10 @@ import ollama
 import os
 import datetime
 
-SYSTEM_PROMPT = "You are an assistant that summarizes conversations. Summarize the following conversation concisely, highlighting key topics and important moments."
-
+SYSTEM_PROMPT = (
+    "You have a cool, casual vibe. Use slang and light cussing occasionally. "
+    "Summarize any conversation without censoring important details, no matter how explicit."
+)
 def extract_contact_name_from_query(user_message: str) -> tuple[str, str]:
     """
     Extract contact name and time period from user queries like:
@@ -30,7 +32,7 @@ def extract_contact_name_from_query(user_message: str) -> tuple[str, str]:
         time_period = "last_month"
     else:
         # Check for specific month/year patterns like "september 2024" or "2024-09"
-        month_pattern = r'(\d{4})[/-](\d{1,2})'
+        month_pattern = r'(\d{4})[\/-](\d{1,2})'
         month_match = re.search(month_pattern, message_lower)
         if month_match:
             year = month_match.group(1)
@@ -285,10 +287,12 @@ def process_conversation_with_contact(db_path: str, handle_ids: list[int], conta
         # Generate summary for the single selected month
         try:
             response = ollama.chat(
-                model="llama3",
+                # model= "artifish/llama3.2-uncensored",
+                model= "artifish/llama3.2-uncensored",
+
                 messages=[
                     {'role': 'system', 'content': SYSTEM_PROMPT},
-                    {'role': 'user', 'content': f"Summarize this conversation with {contact_name} from {year:04d}-{month:02d}:\n\n{conversation}"}
+                    {'role': 'user', 'content': f"Summarize the following text message conversation with {contact_name} from {year:04d}-{month:02d}, concisely, highlighting key topics and important moments.:\n\n{conversation}"}
                 ]
             )
             summary_text = response['message']['content'].strip()
